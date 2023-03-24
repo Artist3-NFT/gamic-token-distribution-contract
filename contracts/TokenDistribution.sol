@@ -58,9 +58,11 @@ contract TokenDistribution {
     }
 
     function depositErc20ToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, address tokenAddress) public {
+        // todo
     }
 
     function depositErc20ToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, address tokenAddress) public {
+        // todo
     }
 
     function claim(uint256 depositId, address recipient) public onlyOwner {
@@ -69,28 +71,24 @@ contract TokenDistribution {
         require(records[depositId].expiredTime >= block.timestamp, "Deposit expired.");
         require(records[depositId].remainCount > 0, "Invalid deposit remainCount.");
         require(claimInfos[depositId][recipient].recipient == address(0), "Already claimed.");
+        uint256 amount = records[depositId].amount / records[depositId].totalCount;
         if (records[depositId].recordType == RECORD_TYPE_RECIPIENTS) {
             require(isInArray(recipient, records[depositId].recipients), "Invalid recipient.");
             if (records[depositId].tokenAddress == address(0)) {
-                uint256 amount = records[depositId].amount / records[depositId].totalCount;
-                records[depositId].remainCount--;
-                claimInfos[depositId][recipient].recipient = recipient;
-                claimInfos[depositId][recipient].claimTime = block.timestamp;
                 payable(recipient).transfer(amount);
             } else {
                 // todo
             }
         } else if (records[depositId].recordType == RECORD_TYPE_ROOM) {
             if (records[depositId].tokenAddress == address(0)) {
-                uint256 amount = records[depositId].amount / records[depositId].totalCount;
-                records[depositId].remainCount--;
-                claimInfos[depositId][recipient].recipient = recipient;
-                claimInfos[depositId][recipient].claimTime = block.timestamp;
                 payable(recipient).transfer(amount);
             } else {
                 // todo
             }
         }
+        records[depositId].remainCount--;
+        claimInfos[depositId][recipient].recipient = recipient;
+        claimInfos[depositId][recipient].claimTime = block.timestamp;
     }
 
     function claimToSender(uint256 depositId) public {
@@ -100,11 +98,11 @@ contract TokenDistribution {
         require(records[depositId].remainCount > 0, "Invalid deposit remainCount.");
         uint256 amount = records[depositId].amount / records[depositId].totalCount * records[depositId].remainCount;
         if (records[depositId].tokenAddress == address(0)) {
-            records[depositId].remainCount = 0;
             payable(msg.sender).transfer(amount);
         } else {
             // todo
         }
+        records[depositId].remainCount = 0;
     }
 
     function isInArray(address addr, address[] memory array) private pure returns(bool) {
