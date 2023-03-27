@@ -1,4 +1,3 @@
-const {BigNumber} = require("ethers");
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
@@ -54,5 +53,7 @@ async function deployContract() {
   const TokenDistribution = await ethers.getContractFactory("TokenDistribution");
   const tokenDistribution = await TokenDistribution.deploy();
   await tokenDistribution.deployed();
+  const accounts = await ethers.getSigners();
+  await tokenDistribution.initialize(accounts[0].address);
   return tokenDistribution
 }
