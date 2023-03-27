@@ -2,12 +2,20 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract TestToken is ERC20 {
+    constructor(uint256 initialSupply) ERC20('TEST ERC20 Token', "TEST") {
+        _mint(msg.sender, initialSupply);
+    }
+}
 
 contract TokenDistribution is Initializable {
 
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
 
+    ERC20 public tokenInstance;
     address public owner;
     uint256 public nextDepositId;
     mapping(uint256 => Record) public records;
@@ -58,12 +66,20 @@ contract TokenDistribution is Initializable {
         nextDepositId++;
     }
 
-    function depositErc20ToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, address tokenAddress) public {
-        // todo
+    function depositErc20ToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, address tokenAddress) public payable {
+        require(msg.value > 0, "Deposit amount is zero.");
+        require(totalCount > 0, "Total count must be greater than zero.");
+        require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
+        
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, recipients, 0, msg.value, totalCount, totalCount, expiredTime);
+        nextDepositId++;
     }
 
-    function depositErc20ToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, address tokenAddress) public {
-        // todo
+    function depositErc20ToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, address tokenAddress) public payable {
+        require(msg.value > 0, "Deposit amount is zero.");
+        require(totalCount > 0, "Total count must be greater than zero.");
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, new address[](0), roomId, msg.value, totalCount, totalCount, expiredTime);
+        nextDepositId++;
     }
 
     function claim(uint256 depositId, address recipient) public onlyOwner {
@@ -78,13 +94,13 @@ contract TokenDistribution is Initializable {
             if (records[depositId].tokenAddress == address(0)) {
                 payable(recipient).transfer(amount);
             } else {
-                // todo
+                ERC20(records[depositId].tokenAddress).transferFrom(records[depositId].sender, recipient, amount);
             }
         } else if (records[depositId].recordType == RECORD_TYPE_ROOM) {
             if (records[depositId].tokenAddress == address(0)) {
                 payable(recipient).transfer(amount);
             } else {
-                // todo
+                ERC20(records[depositId].tokenAddress).transferFrom(records[depositId].sender, recipient, amount);
             }
         }
         records[depositId].remainCount--;
@@ -101,7 +117,9 @@ contract TokenDistribution is Initializable {
         if (records[depositId].tokenAddress == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
-            // todo
+            // uint256 restAmount = ERC20(records[depositId].tokenAddress).allowance(records[depositId].sender, address(this));
+            // console.log("restAmount:", restAmount);
+            // ERC20(records[depositId].tokenAddress).decreaseAllowance(address(this), restAmount);
         }
         records[depositId].remainCount = 0;
     }
@@ -114,6 +132,7 @@ contract TokenDistribution is Initializable {
         }
         return false;
     }
+
 }
 
 
