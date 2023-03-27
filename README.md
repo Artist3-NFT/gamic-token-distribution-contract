@@ -18,3 +18,13 @@ npx hardhat node
 node scripts/script.js
 npx hardhat help
 ```
+
+### 4 deploy contract
+``` shell
+PRIVATE_KEY="You private key" npx hardhat run --network goerli scripts/deploy.js
+```
+
+## 5 update contract
+``` shell
+PRIVATE_KEY="You private key" PROXY_CONTRACT_ADDRESS="0x..." npx hardhat run --network goerli scripts/upgrade.js
+```

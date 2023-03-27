@@ -1,8 +1,9 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract TokenDistribution {
+contract TokenDistribution is Initializable {
 
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
@@ -29,8 +30,8 @@ contract TokenDistribution {
         uint256 claimTime;
     }
 
-    constructor() {
-        owner = msg.sender;
+    function initialize(address _owner) public initializer {
+        owner = _owner;
     }
 
     modifier onlyOwner() {

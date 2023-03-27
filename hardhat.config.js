@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require("@openzeppelin/hardhat-upgrades");
 
 const accounts = process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [];
 
@@ -19,8 +20,13 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  defaultNetwork: "local",
+  defaultNetwork: "hardhat",
   networks: {
+    local: {
+      url: "http://127.0.0.1:8545",
+      gas: 3000000,
+      chainId: 31337
+    },
     goerli: {
       url: "https://rpc.ankr.com/eth_goerli",
       accounts,
