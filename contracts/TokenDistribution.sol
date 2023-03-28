@@ -4,12 +4,6 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract TestToken is ERC20 {
-    constructor(uint256 initialSupply) ERC20('TEST ERC20 Token', "TEST") {
-        _mint(msg.sender, initialSupply);
-    }
-}
-
 contract TokenDistribution is Initializable {
 
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
@@ -94,13 +88,13 @@ contract TokenDistribution is Initializable {
             if (records[depositId].tokenAddress == address(0)) {
                 payable(recipient).transfer(amount);
             } else {
-                ERC20(records[depositId].tokenAddress).transferFrom(records[depositId].sender, recipient, amount);
+                ERC20(records[depositId].tokenAddress).transfer(recipient, amount);
             }
         } else if (records[depositId].recordType == RECORD_TYPE_ROOM) {
             if (records[depositId].tokenAddress == address(0)) {
                 payable(recipient).transfer(amount);
             } else {
-                ERC20(records[depositId].tokenAddress).transferFrom(records[depositId].sender, recipient, amount);
+                ERC20(records[depositId].tokenAddress).transfer(recipient, amount);
             }
         }
         records[depositId].remainCount--;
@@ -117,9 +111,7 @@ contract TokenDistribution is Initializable {
         if (records[depositId].tokenAddress == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
-            // uint256 restAmount = ERC20(records[depositId].tokenAddress).allowance(records[depositId].sender, address(this));
-            // console.log("restAmount:", restAmount);
-            // ERC20(records[depositId].tokenAddress).decreaseAllowance(address(this), restAmount);
+            ERC20(records[depositId].tokenAddress).transfer(records[depositId].sender, amount);
         }
         records[depositId].remainCount = 0;
     }

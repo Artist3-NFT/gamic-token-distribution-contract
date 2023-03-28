@@ -48,30 +48,42 @@ describe("TokenDistributionForErc20", async function () {
     const deployedContract = await deployERC20TestToken();
     const tokenDistribution = await deployContract();
     const tokenAddress = deployedContract.address;
-    
-    await tokenDistribution.depositErc20ToRecipients(1, [TEST_ADDRESS], tomorrow(), tokenAddress, { value: "100" });
-    await deployedContract.approve(tokenDistribution.address, 100);
+
+    const sendingValue = 100;
+    const [owner] = await ethers.getSigners();
+    const ownerBalance = await deployedContract.balanceOf(owner.address);
+    expect(Number(ownerBalance.toString())).above(sendingValue)
+
+    await tokenDistribution.depositErc20ToRecipients(1, [TEST_ADDRESS], tomorrow(), tokenAddress, { value: `${sendingValue}` });
+    await deployedContract.transfer(tokenDistribution.address, sendingValue);
     await tokenDistribution.claim(0, TEST_ADDRESS);
-    expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq("100")
+    expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValue}`)
   });
+
   it("DepositERC20ToRoom and claim", async () => {
     const deployedContract = await deployERC20TestToken();
     const tokenDistribution = await deployContract();
     const tokenAddress = deployedContract.address;
-    
-    await tokenDistribution.depositErc20ToRoom(1, 1, tomorrow(), tokenAddress, { value: "200" });
-    await deployedContract.approve(tokenDistribution.address, 200);
-    await tokenDistribution.claim(0, TEST_ADDRESS);
-    expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq("200")
 
-    
-    await tokenDistribution.depositErc20ToRoom(2, 1, tomorrow(), tokenAddress, { value: "200" });
-    await deployedContract.approve(tokenDistribution.address, 200);
+    const sendingValue1 = 200;
+    const [owner] = await ethers.getSigners();
+    const ownerBalance = await deployedContract.balanceOf(owner.address);
+    expect(Number(ownerBalance.toString())).above(sendingValue1)
+
+    await tokenDistribution.depositErc20ToRoom(1, 1, tomorrow(), tokenAddress, { value: `${sendingValue1}` });
+    await deployedContract.transfer(tokenDistribution.address, sendingValue1);
+    await tokenDistribution.claim(0, TEST_ADDRESS);
+    expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValue1}`)
+
+
+    await tokenDistribution.depositErc20ToRoom(2, 1, tomorrow(), tokenAddress, { value: `${sendingValue1}` });
+    await deployedContract.transfer(tokenDistribution.address, sendingValue1);
     await tokenDistribution.claim(1, TEST_ADDRESS);
     expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq("300")
-    
+
     await time.setNextBlockTimestamp(tomorrow() + 3600);
     await tokenDistribution.claimToSender(1);
+    expect((await deployedContract.balanceOf(tokenDistribution.address)).toString()).eq("0")
   });
 
 });
@@ -95,7 +107,7 @@ async function deployContract() {
 
 async function deployERC20TestToken() {
   const [owner] = await ethers.getSigners();
-  const TestToken = await ethers.getContractFactory("TestToken", owner);
+  const TestToken = await ethers.getContractFactory("ERC20TestToken", owner);
   const totalSupply = (10 ** 9).toString()
   const testToken = await TestToken.deploy(ethers.utils.parseEther(totalSupply));
   await testToken.deployed();
