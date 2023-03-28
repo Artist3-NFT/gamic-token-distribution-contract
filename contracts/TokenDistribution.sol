@@ -32,6 +32,12 @@ contract TokenDistribution is Initializable {
         uint256 claimTime;
     }
 
+    event DepositEvent(
+        uint256 depositId,
+        address sender
+    );
+
+
     function initialize(address _owner) public initializer {
         owner = _owner;
     }
@@ -50,6 +56,7 @@ contract TokenDistribution is Initializable {
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
         records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, recipients, 0, msg.value, totalCount, totalCount, expiredTime);
+        emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
 
@@ -57,6 +64,7 @@ contract TokenDistribution is Initializable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
         records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, new address[](0), roomId, msg.value, totalCount, totalCount, expiredTime);
+        emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
 
@@ -64,8 +72,9 @@ contract TokenDistribution is Initializable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
-        
+
         records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, recipients, 0, msg.value, totalCount, totalCount, expiredTime);
+        emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
 
@@ -73,6 +82,7 @@ contract TokenDistribution is Initializable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
         records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, new address[](0), roomId, msg.value, totalCount, totalCount, expiredTime);
+        emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
 
