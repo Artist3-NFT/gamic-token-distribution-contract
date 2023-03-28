@@ -35,10 +35,10 @@ describe("TokenDistribution", async function () {
     const balance2 = await recipient.getBalance();
     expect(balance2.toString()).eq("300")
 
+    await tokenDistribution.depositETHToRoom(2, 1, now(), { value: "100" });
+    expect((await tokenDistribution.provider.getBalance(tokenDistribution.address)).toString()).eq("150")
+    await tokenDistribution.claimToSender(2);
     expect((await tokenDistribution.provider.getBalance(tokenDistribution.address)).toString()).eq("50")
-    await time.setNextBlockTimestamp(tomorrow() + 3600);
-    await tokenDistribution.claimToSender(1);
-    expect((await tokenDistribution.provider.getBalance(tokenDistribution.address)).toString()).eq("0")
   });
 });
 
