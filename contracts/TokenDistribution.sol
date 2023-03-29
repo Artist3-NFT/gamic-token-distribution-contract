@@ -71,12 +71,16 @@ contract TokenDistribution is Initializable {
         nextDepositId++;
     }
 
-    function depositErc20ToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, address tokenAddress) public payable {
-        require(msg.value > 0, "Deposit amount is zero.");
+    function depositErc20ToRecipients(uint256 totalValue, uint32 totalCount, address[] memory recipients, uint256 expiredTime, address tokenAddress) public {
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
+        
+        ERC20 targetToken = ERC20(tokenAddress);
+        uint256 allowanceHereFromSender = targetToken.allowance(msg.sender, address(this));
+        require(allowanceHereFromSender >= totalValue, "The allowance of this contract must be greater than or equal to the sending value.");
+        targetToken.transferFrom(msg.sender, address(this), totalValue);
 
-        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, 0, msg.value, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, 0, totalValue, totalCount, totalCount, expiredTime);
         for(uint i = 0; i < recipients.length; i++) {
             depositRecipients[nextDepositId][recipients[i]] = true;
         }
@@ -84,10 +88,16 @@ contract TokenDistribution is Initializable {
         nextDepositId++;
     }
 
-    function depositErc20ToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, address tokenAddress) public payable {
-        require(msg.value > 0, "Deposit amount is zero.");
+    function depositErc20ToRoom(uint256 totalValue, uint32 totalCount, uint32 roomId, uint256 expiredTime, address tokenAddress) public {
+        require(totalValue > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
-        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, roomId, msg.value, totalCount, totalCount, expiredTime);
+
+        ERC20 targetToken = ERC20(tokenAddress);
+        uint256 allowanceHereFromSender = targetToken.allowance(msg.sender, address(this));
+        require(allowanceHereFromSender >= totalValue, "The allowance of this contract must be greater than or equal to the sending value.");
+        targetToken.transferFrom(msg.sender, address(this), totalValue);
+
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, roomId, totalValue, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
