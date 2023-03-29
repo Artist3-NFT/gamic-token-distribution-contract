@@ -1,3 +1,4 @@
+//"SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
@@ -9,17 +10,16 @@ contract TokenDistribution is Initializable {
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
 
-    ERC20 public tokenInstance;
     address public owner;
     uint256 public nextDepositId;
     mapping(uint256 => Record) public records;
     mapping(uint256 => mapping(address => ClaimInfo)) public claimInfos;
+    mapping(uint256 => mapping(address => bool)) public depositRecipients;
 
     struct Record {
         address sender;
         address tokenAddress;
         uint8 recordType; // 1-To recipients 2-To room
-        address[] recipients; // for type 1
         uint32 roomId; // for type 2
         uint256 amount;
         uint32 totalCount;
@@ -55,7 +55,10 @@ contract TokenDistribution is Initializable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, recipients, 0, msg.value, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, 0, msg.value, totalCount, totalCount, expiredTime);
+        for(uint i = 0; i < recipients.length; i++) {
+            depositRecipients[nextDepositId][recipients[i]] = true;
+        }
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -63,7 +66,7 @@ contract TokenDistribution is Initializable {
     function depositETHToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime) public payable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, new address[](0), roomId, msg.value, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, roomId, msg.value, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -73,7 +76,10 @@ contract TokenDistribution is Initializable {
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
 
-        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, recipients, 0, msg.value, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, 0, msg.value, totalCount, totalCount, expiredTime);
+        for(uint i = 0; i < recipients.length; i++) {
+            depositRecipients[nextDepositId][recipients[i]] = true;
+        }
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -81,7 +87,7 @@ contract TokenDistribution is Initializable {
     function depositErc20ToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, address tokenAddress) public payable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
-        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, new address[](0), roomId, msg.value, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, roomId, msg.value, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -94,7 +100,7 @@ contract TokenDistribution is Initializable {
         require(claimInfos[depositId][recipient].recipient == address(0), "Already claimed.");
         uint256 amount = records[depositId].amount / records[depositId].totalCount;
         if (records[depositId].recordType == RECORD_TYPE_RECIPIENTS) {
-            require(isInArray(recipient, records[depositId].recipients), "Invalid recipient.");
+            require(depositRecipients[depositId][recipient] == true, "Invalid recipient.");
             if (records[depositId].tokenAddress == address(0)) {
                 payable(recipient).transfer(amount);
             } else {
@@ -125,16 +131,6 @@ contract TokenDistribution is Initializable {
         }
         records[depositId].remainCount = 0;
     }
-
-    function isInArray(address addr, address[] memory array) private pure returns(bool) {
-        for(uint i=  0; i < array.length; i++) {
-            if(array[i] == addr) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 }
 
 
