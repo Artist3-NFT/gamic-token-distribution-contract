@@ -10,13 +10,13 @@ describe("TokenDistribution", async function () {
   it("DepositETHToRecipients and claim", async () => {
     const tokenDistribution = await deployContract();
     const recipient = await ethers.getSigner(TEST_ADDRESS);
-    await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), { value: "100" });
-    await tokenDistribution.claim(0, TEST_ADDRESS);
+    await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, { value: "100" });
+    await tokenDistribution.claim(0, TEST_ADDRESS, 50);
     const balance1 = await recipient.getBalance();
     expect(balance1.toString()).eq("100")
 
-    await tokenDistribution.depositETHToRecipients(2, [TEST_ADDRESS, TEST_ADDRESS], tomorrow(), { value: "100" });
-    await tokenDistribution.claim(1, TEST_ADDRESS);
+    await tokenDistribution.depositETHToRecipients(2, [TEST_ADDRESS, TEST_ADDRESS], tomorrow(), false, { value: "100" });
+    await tokenDistribution.claim(1, TEST_ADDRESS, 50);
     const balance2 = await recipient.getBalance();
     expect(balance2.toString()).eq("150")
 
@@ -25,17 +25,17 @@ describe("TokenDistribution", async function () {
   it("DepositETHToRoom and claim", async () => {
     const tokenDistribution = await deployContract();
     const recipient = await ethers.getSigner(TEST_ADDRESS);
-    await tokenDistribution.depositETHToRoom(1, 1, tomorrow(), { value: "100" });
-    await tokenDistribution.claim(0, TEST_ADDRESS);
+    await tokenDistribution.depositETHToRoom(1, 1, tomorrow(), false, { value: "100" });
+    await tokenDistribution.claim(0, TEST_ADDRESS, 100);
     const balance1 = await recipient.getBalance();
     expect(balance1.toString()).eq("250")
 
-    await tokenDistribution.depositETHToRoom(2, 1, tomorrow(), { value: "100" });
-    await tokenDistribution.claim(1, TEST_ADDRESS);
+    await tokenDistribution.depositETHToRoom(2, 1, tomorrow(), false, { value: "100" });
+    await tokenDistribution.claim(1, TEST_ADDRESS, 50);
     const balance2 = await recipient.getBalance();
     expect(balance2.toString()).eq("300")
 
-    await tokenDistribution.depositETHToRoom(2, 1, now(), { value: "100" });
+    await tokenDistribution.depositETHToRoom(2, 1, now(), false, { value: "100" });
     expect((await tokenDistribution.provider.getBalance(tokenDistribution.address)).toString()).eq("150")
     await tokenDistribution.claimToSender(2);
     expect((await tokenDistribution.provider.getBalance(tokenDistribution.address)).toString()).eq("50")
@@ -56,8 +56,8 @@ describe("TokenDistributionForErc20", async function () {
 
     await deployedContract.approve(tokenDistribution.address, sendingValue);
 
-    await tokenDistribution.depositErc20ToRecipients(sendingValue, 1, [TEST_ADDRESS], tomorrow(), tokenAddress);
-    await tokenDistribution.claim(0, TEST_ADDRESS);
+    await tokenDistribution.depositErc20ToRecipients(sendingValue, 1, [TEST_ADDRESS], tomorrow(), false, tokenAddress);
+    await tokenDistribution.claim(0, TEST_ADDRESS, sendingValue);
     expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValue}`)
   });
 
@@ -72,15 +72,15 @@ describe("TokenDistributionForErc20", async function () {
     expect(Number(ownerBalance.toString())).above(sendingValue1)
 
     await deployedContract.approve(tokenDistribution.address, sendingValue1);
-    await tokenDistribution.depositErc20ToRoom(sendingValue1, 1, 1, tomorrow(), tokenAddress);
+    await tokenDistribution.depositErc20ToRoom(sendingValue1, 1, 1, tomorrow(), false, tokenAddress);
     // await deployedContract.transfer(tokenDistribution.address, sendingValue1);
-    await tokenDistribution.claim(0, TEST_ADDRESS);
+    await tokenDistribution.claim(0, TEST_ADDRESS, sendingValue1);
     expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValue1}`)
 
     await deployedContract.approve(tokenDistribution.address, sendingValue1);
-    await tokenDistribution.depositErc20ToRoom(sendingValue1, 2, 1, tomorrow(), tokenAddress);
+    await tokenDistribution.depositErc20ToRoom(sendingValue1, 2, 1, tomorrow(), false, tokenAddress);
     // await deployedContract.transfer(tokenDistribution.address, sendingValue1);
-    await tokenDistribution.claim(1, TEST_ADDRESS);
+    await tokenDistribution.claim(1, TEST_ADDRESS, sendingValue1/2);
     expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq("300")
 
     await time.setNextBlockTimestamp(tomorrow() + 3600);

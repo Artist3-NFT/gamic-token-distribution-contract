@@ -26,5 +26,10 @@ PRIVATE_KEY="You private key" npx hardhat run --network goerli scripts/deploy.js
 
 ## 5 update contract
 ``` shell
-PRIVATE_KEY="You private key" PROXY_CONTRACT_ADDRESS="0x..." npx hardhat run --network goerli scripts/upgrade.js
+PRIVATE_KEY="You private key" PROXY_CONTRACT_ADDRESS="0x..." npx hardhat run --network sepolia scripts/upgrade.js
+```
+
+##6 verify contract
+``` shell
+npx hardhat verify --network sepolia "0x..."
 ```

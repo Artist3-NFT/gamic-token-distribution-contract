@@ -32,6 +32,17 @@ module.exports = {
       accounts,
       gas: 3000000
     },
+    sepolia: {
+      url: "https://rpc.sepolia.org",
+      accounts,
+      gas: 3000000,
+      chainId: 11155111
+    },
+  },
+  etherscan: {
+    apiKey: {
+      sepolia: "BQ18ISXD1JMNYMZUDXWC2M1SI3UWXAFVZ9y"
+    }
   },
   solidity: "0.8.4",
 };
