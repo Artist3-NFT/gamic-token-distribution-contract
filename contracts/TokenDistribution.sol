@@ -14,6 +14,7 @@ contract TokenDistribution is Initializable {
     mapping(uint256 => Record) public records;
     mapping(uint256 => mapping(address => ClaimInfo)) public claimInfos;
     mapping(uint256 => mapping(address => bool)) public depositRecipients;
+    bool private _locked;
 
     struct Record {
         address sender;
@@ -47,6 +48,13 @@ contract TokenDistribution is Initializable {
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the contract owner can call this function.");
         _;
+    }
+
+    modifier noReentrant() {
+        require(!_locked);
+        _locked = true;
+        _;
+        _locked = false;
     }
 
     function transferOwnership(address newOwner) public onlyOwner {
@@ -104,7 +112,7 @@ contract TokenDistribution is Initializable {
         nextDepositId++;
     }
 
-    function claim(uint256 depositId, address recipient, uint256 amount) public onlyOwner {
+    function claim(uint256 depositId, address recipient, uint256 amount) public onlyOwner noReentrant {
         require(msg.sender == owner, "Only the owner can claim.");
         require(claimInfos[depositId][recipient].recipient == address(0), "Already claimed.");
         require(records[depositId].sender != address(0), "Invalid deposit ID.");
@@ -114,6 +122,10 @@ contract TokenDistribution is Initializable {
         if (records[depositId].remainingCount == 1) {
             amount = records[depositId].remainingAmount;
         }
+        records[depositId].remainingCount--;
+        records[depositId].remainingAmount -= amount;
+        claimInfos[depositId][recipient].recipient = recipient;
+        claimInfos[depositId][recipient].claimTime = block.timestamp;
         if (records[depositId].recordType == RECORD_TYPE_RECIPIENTS) {
             require(depositRecipients[depositId][recipient] == true, "Invalid recipient.");
             if (records[depositId].tokenAddress == address(0)) {
@@ -128,24 +140,20 @@ contract TokenDistribution is Initializable {
                 ERC20(records[depositId].tokenAddress).transfer(recipient, amount);
             }
         }
-        records[depositId].remainingCount--;
-        records[depositId].remainingAmount -= amount;
-        claimInfos[depositId][recipient].recipient = recipient;
-        claimInfos[depositId][recipient].claimTime = block.timestamp;
     }
 
-    function claimToSender(uint256 depositId) public {
+    function claimToSender(uint256 depositId) public noReentrant {
         require(records[depositId].sender != address(0), "Invalid deposit ID.");
         require(msg.sender == records[depositId].sender, "Only the sender can claim.");
         require(records[depositId].expiredTime < block.timestamp, "Only expired deposit can claim to sender.");
         require(records[depositId].remainingCount > 0, "Invalid deposit remainingCount.");
         uint256 amount = records[depositId].remainingAmount;
+        records[depositId].remainingCount = 0;
         if (records[depositId].tokenAddress == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
             ERC20(records[depositId].tokenAddress).transfer(records[depositId].sender, amount);
         }
-        records[depositId].remainingCount = 0;
     }
 }
 
