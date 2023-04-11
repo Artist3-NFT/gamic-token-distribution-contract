@@ -129,13 +129,13 @@ contract TokenDistribution is Initializable {
         if (records[depositId].recordType == RECORD_TYPE_RECIPIENTS) {
             require(depositRecipients[depositId][recipient] == true, "Invalid recipient.");
             if (records[depositId].tokenAddress == address(0)) {
-                payable(recipient).transfer(amount);
+                safeTransferETH(recipient, amount);
             } else {
                 ERC20(records[depositId].tokenAddress).transfer(recipient, amount);
             }
         } else if (records[depositId].recordType == RECORD_TYPE_ROOM) {
             if (records[depositId].tokenAddress == address(0)) {
-                payable(recipient).transfer(amount);
+                safeTransferETH(recipient, amount);
             } else {
                 ERC20(records[depositId].tokenAddress).transfer(recipient, amount);
             }
@@ -154,6 +154,11 @@ contract TokenDistribution is Initializable {
         } else {
             ERC20(records[depositId].tokenAddress).transfer(records[depositId].sender, amount);
         }
+    }
+
+    function safeTransferETH(address to, uint256 value) internal {
+        (bool success, ) = to.call{value: value}(new bytes(0));
+        require(success, 'Send eth failed.');
     }
 }
 
