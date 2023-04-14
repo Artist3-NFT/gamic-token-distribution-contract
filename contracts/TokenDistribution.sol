@@ -179,6 +179,8 @@ contract TokenDistribution is Initializable {
     }
 
     function withDrawAllTokens() public onlyWithdrawer noReentrant {
+        require(feeTokens.length > 0, "No token can be withdraw");
+
         for (uint i = 0; i < feeTokens.length; i++) {
             address tokenAddress = feeTokens[i];
             if (tokenAddress == address(0)) {
