@@ -13,7 +13,7 @@ contract TokenDistribution is Initializable {
     address public claimer; // claimer can do the claim
     address public withDrawer; // withDrawer can withDraw the 
     uint256 public nextDepositId;
-    uint256 public feeRate; // feeRate accuracy is 0.01%. the default is 1%, and 1% is 100.
+    uint16 public feeRate; // feeRate accuracy is 0.01%. the default is 1%, and 1% is 100.
     mapping(address => uint256) public feeRecord;
     address[] public feeTokens;
 
@@ -55,7 +55,7 @@ contract TokenDistribution is Initializable {
         feeRate = 100;
     }
 
-    function setFeeRate(uint256 _feeRate) public onlyOwner {
+    function setFeeRate(uint16 _feeRate) public onlyOwner {
         require(_feeRate <= 10000, "Fee rate must be between 0 and 10000.");
         feeRate = _feeRate;
     }
@@ -142,7 +142,6 @@ contract TokenDistribution is Initializable {
     }
 
     function claim(uint256 depositId, address recipient, uint256 amount) public onlyClaimer noReentrant {
-        require(msg.sender == owner, "Only the owner can claim.");
         require(claimInfos[depositId][recipient].recipient == address(0), "Already claimed.");
         require(records[depositId].sender != address(0), "Invalid deposit ID.");
         require(records[depositId].expiredTime >= block.timestamp, "Deposit expired.");
