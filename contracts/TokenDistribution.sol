@@ -9,8 +9,15 @@ contract TokenDistribution is Initializable {
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
 
-    address public owner;
+    address public owner; // owner is the admin, and the contract creator.
+    address public claimer; // claimer can do the claim
+    address public withDrawer; // withDrawer can withDraw the 
     uint256 public nextDepositId;
+    uint256 public feeRate; // feeRate accuracy is 0.01%. the default is 1%, and 1% is 100.
+    mapping(address => uint256) public feeRecord;
+    address[] public feeTokens;
+
+
     mapping(uint256 => Record) public records;
     mapping(uint256 => mapping(address => ClaimInfo)) public claimInfos;
     mapping(uint256 => mapping(address => bool)) public depositRecipients;
@@ -43,10 +50,26 @@ contract TokenDistribution is Initializable {
 
     function initialize(address _owner) public initializer {
         owner = _owner;
+        claimer = _owner;
+        withDrawer = _owner;
+        feeRate = 100;
+    }
+
+    function setFeeRate(uint256 _feeRate) public onlyOwner {
+        require(_feeRate <= 10000, "Fee rate must be between 0 and 10000.");
+        feeRate = _feeRate;
     }
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the contract owner can call this function.");
+        _;
+    }
+    modifier onlyClaimer() {
+        require(msg.sender == claimer || msg.sender == owner, "Only the contract owner or claimer can call this function.");
+        _;
+    }
+    modifier onlyWithdrawer() {
+        require(msg.sender == withDrawer || msg.sender == owner, "Only the contract owner or withdrawer can call this function.");
         _;
     }
 
@@ -59,6 +82,12 @@ contract TokenDistribution is Initializable {
 
     function transferOwnership(address newOwner) public onlyOwner {
         owner = newOwner;
+    }
+    function transferClaimShip(address newClaimer) public onlyOwner {
+        claimer = newClaimer;
+    }
+    function transferWithdrawShip(address newWithdrawer) public onlyOwner {
+        withDrawer = newWithdrawer;
     }
 
     function depositETHToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random) public payable {
@@ -112,7 +141,7 @@ contract TokenDistribution is Initializable {
         nextDepositId++;
     }
 
-    function claim(uint256 depositId, address recipient, uint256 amount) public onlyOwner noReentrant {
+    function claim(uint256 depositId, address recipient, uint256 amount) public onlyClaimer noReentrant {
         require(msg.sender == owner, "Only the owner can claim.");
         require(claimInfos[depositId][recipient].recipient == address(0), "Already claimed.");
         require(records[depositId].sender != address(0), "Invalid deposit ID.");
@@ -126,20 +155,46 @@ contract TokenDistribution is Initializable {
         records[depositId].remainingAmount -= amount;
         claimInfos[depositId][recipient].recipient = recipient;
         claimInfos[depositId][recipient].claimTime = block.timestamp;
+        uint256 feeAmount = ((amount * feeRate) / 10000);
         if (records[depositId].recordType == RECORD_TYPE_RECIPIENTS) {
             require(depositRecipients[depositId][recipient] == true, "Invalid recipient.");
             if (records[depositId].tokenAddress == address(0)) {
-                safeTransferETH(recipient, amount);
+                safeTransferETH(recipient, amount - feeAmount);
             } else {
-                ERC20(records[depositId].tokenAddress).transfer(recipient, amount);
+                ERC20(records[depositId].tokenAddress).transfer(recipient, amount - feeAmount);
             }
         } else if (records[depositId].recordType == RECORD_TYPE_ROOM) {
             if (records[depositId].tokenAddress == address(0)) {
-                safeTransferETH(recipient, amount);
+                safeTransferETH(recipient, amount - feeAmount);
             } else {
-                ERC20(records[depositId].tokenAddress).transfer(recipient, amount);
+                ERC20(records[depositId].tokenAddress).transfer(recipient, amount - feeAmount);
             }
         }
+        if (feeAmount > 0) {
+            feeRecord[records[depositId].tokenAddress] += feeAmount;
+            if (feeRecord[address(records[depositId].tokenAddress)] == feeAmount) {
+                feeTokens.push(address(records[depositId].tokenAddress));
+            }
+        }
+    }
+
+    function withDrawAllTokens() public onlyWithdrawer noReentrant {
+        for (uint i = 0; i < feeTokens.length; i++) {
+            address tokenAddress = feeTokens[i];
+            if (tokenAddress == address(0)) {
+                if (feeRecord[tokenAddress] > 0) {
+                    payable(withDrawer).transfer(feeRecord[tokenAddress]);
+                }
+            } else {
+                ERC20(tokenAddress).transfer(withDrawer, feeRecord[tokenAddress]);
+            }
+            delete feeRecord[tokenAddress];
+        }
+        delete feeTokens;
+    }
+
+    function listTokens() public view returns (address[] memory) {
+        return feeTokens;
     }
 
     function claimToSender(uint256 depositId) public noReentrant {

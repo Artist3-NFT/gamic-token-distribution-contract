@@ -7,6 +7,65 @@ const TEST_ADDRESS = "0x726063423641b0d028D17E32960A0288B818783d"
 
 describe("TokenDistribution", async function () {
 
+  describe("Token fee and withdraw it.", async function () {
+
+    it("DepositERC20AndEth and then withdraw", async () => {
+      const deployedContract = await deployERC20TestToken();
+      const tokenDistribution = await deployContract();
+      const tokenAddress = deployedContract.address;
+      const recipient = await ethers.getSigner(TEST_ADDRESS);
+      const balance1 = await recipient.getBalance();
+      const sendingValue = 100;
+      await tokenDistribution.setFeeRate(500);
+      const sendingValueAfterFee = 95;
+      const [owner] = await ethers.getSigners();
+      const ownerBalance = await deployedContract.balanceOf(owner.address);
+      expect(Number(ownerBalance.toString())).above(sendingValue)
+  
+      await deployedContract.approve(tokenDistribution.address, sendingValue);
+  
+      await tokenDistribution.depositErc20ToRecipients(sendingValue, 1, [TEST_ADDRESS], tomorrow(), false, tokenAddress);
+      await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, { value: `${sendingValue}` });
+
+      await tokenDistribution.claim(0, TEST_ADDRESS, sendingValue);
+      await tokenDistribution.setFeeRate(1000);
+      const sendingValueAfterFee2 = 90;
+      await tokenDistribution.claim(1, TEST_ADDRESS, sendingValue);
+      
+      // recipient's ERC20 balance should be increased according the feeRate.
+      expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValueAfterFee}`)
+      
+      const balance2 = await recipient.getBalance();
+      // recipient's eth balance should be increased according the feeRate.
+      expect((balance2 - balance1).toString()).eq(`${sendingValueAfterFee2}`)
+
+      await tokenDistribution.transferWithdrawShip(TEST_ADDRESS);
+      const listTokensRes = await tokenDistribution.listTokens();
+      
+      // contract's array of withdrawable token list, should have 2 item.
+      expect(listTokensRes.length).eq(2)
+      const recipientBalance1 = await recipient.getBalance();
+      
+      // the ERC20 balance of contract should be according to the feeRate.
+      expect((await deployedContract.balanceOf(tokenDistribution.address)).toString()).eq(`${(sendingValue - sendingValueAfterFee)}`)
+      
+      await tokenDistribution.withDrawAllTokens();
+      
+      const recipientBalance2 = await recipient.getBalance();
+      
+      // recipient is the withdrawer, and ETH balance should increase 10 after withdrawer.
+      expect((recipientBalance2 - recipientBalance1).toString()).eq(`${(sendingValue - sendingValueAfterFee2)}`) 
+      
+      // contract's ERC20 balance should be 0 after withdrawder
+      expect((await deployedContract.balanceOf(tokenDistribution.address)).toString()).eq('0')
+
+      const listTokensRes2 = await tokenDistribution.listTokens();
+      
+      // contract's array of withdrawable token list, should be empty
+      expect(listTokensRes2.length).eq(0)
+    });
+  });
+
   it("DepositETHToRecipients and claim", async () => {
     const tokenDistribution = await deployContract();
     const recipient = await ethers.getSigner(TEST_ADDRESS);
@@ -104,6 +163,7 @@ async function deployContract() {
   await tokenDistribution.deployed();
   const accounts = await ethers.getSigners();
   await tokenDistribution.initialize(accounts[0].address);
+  await tokenDistribution.setFeeRate(0);
   return tokenDistribution
 }
 
