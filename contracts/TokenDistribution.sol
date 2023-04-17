@@ -204,7 +204,7 @@ contract TokenDistribution is Initializable {
         require(records[depositId].expiredTime < block.timestamp, "Only expired deposit can claim to sender.");
         require(records[depositId].remainingCount > 0, "Invalid deposit remainingCount.");
         uint256 amount = records[depositId].remainingAmount;
-        records[depositId].remainingCount = 0;
+        records[depositId].remainingAmount = 0;
         if (records[depositId].tokenAddress == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
