@@ -11,7 +11,7 @@ contract TokenDistribution is Initializable {
 
     address public owner; // owner is the admin, and the contract creator.
     address public claimer; // claimer can do the claim
-    address public withDrawer; // withDrawer can withDraw the 
+    address public withDrawer; // withDrawer can withDraw the
     uint256 public nextDepositId;
     uint16 public feeRate; // feeRate accuracy is 0.01%. the default is 1%, and 1% is 100.
     mapping(address => uint256) public feeRecord;
@@ -20,7 +20,6 @@ contract TokenDistribution is Initializable {
 
     mapping(uint256 => Record) public records;
     mapping(uint256 => mapping(address => ClaimInfo)) public claimInfos;
-    mapping(uint256 => mapping(address => bool)) public depositRecipients;
     bool private _locked;
 
     struct Record {
@@ -28,6 +27,7 @@ contract TokenDistribution is Initializable {
         address tokenAddress;
         uint8 recordType; // 1-To recipients 2-To room
         bool random;
+        address[] recipients; // for type 1
         uint32 roomId; // for type 2
         uint256 amount;
         uint256 remainingAmount;
@@ -94,10 +94,7 @@ contract TokenDistribution is Initializable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, random, 0, msg.value, msg.value, totalCount, totalCount, expiredTime);
-        for(uint i = 0; i < recipients.length; i++) {
-            depositRecipients[nextDepositId][recipients[i]] = true;
-        }
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, random, recipients, 0, msg.value, msg.value, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -105,7 +102,7 @@ contract TokenDistribution is Initializable {
     function depositETHToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random) public payable {
         require(msg.value > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, random, roomId, msg.value, msg.value, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, random, new address[](0), roomId, msg.value, msg.value, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -119,10 +116,7 @@ contract TokenDistribution is Initializable {
         require(allowanceHereFromSender >= totalValue, "The allowance of this contract must be greater than or equal to the sending value.");
         targetToken.transferFrom(msg.sender, address(this), totalValue);
 
-        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, random, 0, totalValue, totalValue, totalCount, totalCount, expiredTime);
-        for(uint i = 0; i < recipients.length; i++) {
-            depositRecipients[nextDepositId][recipients[i]] = true;
-        }
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_RECIPIENTS, random, recipients, 0, totalValue, totalValue, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -136,7 +130,7 @@ contract TokenDistribution is Initializable {
         require(allowanceHereFromSender >= totalValue, "The allowance of this contract must be greater than or equal to the sending value.");
         targetToken.transferFrom(msg.sender, address(this), totalValue);
 
-        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, random, roomId, totalValue, totalValue, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, tokenAddress, RECORD_TYPE_ROOM, random, new address[](0), roomId, totalValue, totalValue, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
@@ -155,19 +149,10 @@ contract TokenDistribution is Initializable {
         claimInfos[depositId][recipient].recipient = recipient;
         claimInfos[depositId][recipient].claimTime = block.timestamp;
         uint256 feeAmount = ((amount * feeRate) / 10000);
-        if (records[depositId].recordType == RECORD_TYPE_RECIPIENTS) {
-            require(depositRecipients[depositId][recipient] == true, "Invalid recipient.");
-            if (records[depositId].tokenAddress == address(0)) {
-                safeTransferETH(recipient, amount - feeAmount);
-            } else {
-                ERC20(records[depositId].tokenAddress).transfer(recipient, amount - feeAmount);
-            }
-        } else if (records[depositId].recordType == RECORD_TYPE_ROOM) {
-            if (records[depositId].tokenAddress == address(0)) {
-                safeTransferETH(recipient, amount - feeAmount);
-            } else {
-                ERC20(records[depositId].tokenAddress).transfer(recipient, amount - feeAmount);
-            }
+        if (records[depositId].tokenAddress == address(0)) {
+            safeTransferETH(recipient, amount - feeAmount);
+        } else {
+            ERC20(records[depositId].tokenAddress).transfer(recipient, amount - feeAmount);
         }
         if (feeAmount > 0) {
             feeRecord[records[depositId].tokenAddress] += feeAmount;
@@ -205,6 +190,7 @@ contract TokenDistribution is Initializable {
         require(records[depositId].remainingCount > 0, "Invalid deposit remainingCount.");
         uint256 amount = records[depositId].remainingAmount;
         records[depositId].remainingAmount = 0;
+        records[depositId].remainingCount = 0;
         if (records[depositId].tokenAddress == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
