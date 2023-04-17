@@ -8,6 +8,7 @@ contract TokenDistribution is Initializable {
 
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
+    uint32 constant claimGasEvaluate = 220669;
 
     address public owner; // owner is the admin, and the contract creator.
     address public claimer; // claimer can do the claim
@@ -90,26 +91,40 @@ contract TokenDistribution is Initializable {
         withDrawer = newWithdrawer;
     }
 
-    function depositETHToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random) public payable {
+    function depositETHToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random, uint256 preGas) public payable {
         require(msg.value > 0, "Deposit amount is zero.");
+        require(msg.value > preGas, "Invalid Deposit Data.");
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, random, recipients, 0, msg.value, msg.value, totalCount, totalCount, expiredTime);
+
+        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        require(preGas >= localGas, "The preset claim gas is not enough.");
+        uint256 depositeValue = msg.value - preGas;
+
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, random, recipients, 0, depositeValue, depositeValue, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
 
-    function depositETHToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random) public payable {
+    function depositETHToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random, uint256 preGas) public payable {
         require(msg.value > 0, "Deposit amount is zero.");
+        require(msg.value > preGas, "Invalid Deposit Data.");
         require(totalCount > 0, "Total count must be greater than zero.");
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, random, new address[](0), roomId, msg.value, msg.value, totalCount, totalCount, expiredTime);
+
+        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        require(preGas >= localGas, "The preset claim gas is not enough.");
+        uint256 depositeValue = msg.value - preGas;
+
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, random, new address[](0), roomId, depositeValue, depositeValue, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
 
-    function depositErc20ToRecipients(uint256 totalValue, uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random, address tokenAddress) public {
+    function depositErc20ToRecipients(uint256 totalValue, uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random, address tokenAddress) public payable {
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
+        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        require(msg.value >= localGas, "The preset claim gas is not enough.");
 
         ERC20 targetToken = ERC20(tokenAddress);
         uint256 allowanceHereFromSender = targetToken.allowance(msg.sender, address(this));
@@ -121,9 +136,11 @@ contract TokenDistribution is Initializable {
         nextDepositId++;
     }
 
-    function depositErc20ToRoom(uint256 totalValue, uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random, address tokenAddress) public {
+    function depositErc20ToRoom(uint256 totalValue, uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random, address tokenAddress) public payable {
         require(totalValue > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
+        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        require(msg.value >= localGas, "The preset claim gas is not enough.");
 
         ERC20 targetToken = ERC20(tokenAddress);
         uint256 allowanceHereFromSender = targetToken.allowance(msg.sender, address(this));

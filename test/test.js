@@ -4,6 +4,7 @@ const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 const TEST_ADDRESS = "0x726063423641b0d028D17E32960A0288B818783d"
+const claimGasEstimate = Math.floor(220669 * 1.1)
 
 describe("TokenDistribution", async function () {
 
@@ -21,46 +22,55 @@ describe("TokenDistribution", async function () {
       const [owner] = await ethers.getSigners();
       const ownerBalance = await deployedContract.balanceOf(owner.address);
       expect(Number(ownerBalance.toString())).above(sendingValue)
-  
+
       await deployedContract.approve(tokenDistribution.address, sendingValue);
-  
-      await tokenDistribution.depositErc20ToRecipients(sendingValue, 1, [TEST_ADDRESS], tomorrow(), false, tokenAddress);
-      await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, { value: `${sendingValue}` });
+
+      let realDepositeValue = BigNumber.from(`${sendingValue}`);
+      const gasPrice = await ethers.provider.getGasPrice();
+      const estimatedGas = BigNumber.from(claimGasEstimate)
+      const preGas = BigNumber.from(`${gasPrice * estimatedGas}`);
+
+      await tokenDistribution.depositErc20ToRecipients(sendingValue, 1, [TEST_ADDRESS], tomorrow(), false, tokenAddress, { value: `${preGas}` });
+
+      realDepositeValue = realDepositeValue.add(preGas);
+      // console.log('1A realDepositeValue :', realDepositeValue, gasPrice, estimatedGas)
+
+      await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, preGas, { value: `${realDepositeValue}` });
 
       await tokenDistribution.claim(0, TEST_ADDRESS, sendingValue);
       await tokenDistribution.setFeeRate(1000);
       const sendingValueAfterFee2 = 90;
       await tokenDistribution.claim(1, TEST_ADDRESS, sendingValue);
-      
+
       // recipient's ERC20 balance should be increased according the feeRate.
       expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValueAfterFee}`)
-      
+
       const balance2 = await recipient.getBalance();
       // recipient's eth balance should be increased according the feeRate.
       expect((balance2 - balance1).toString()).eq(`${sendingValueAfterFee2}`)
 
       await tokenDistribution.transferWithdrawShip(TEST_ADDRESS);
       const listTokensRes = await tokenDistribution.listTokens();
-      
+
       // contract's array of withdrawable token list, should have 2 item.
       expect(listTokensRes.length).eq(2)
       const recipientBalance1 = await recipient.getBalance();
-      
+
       // the ERC20 balance of contract should be according to the feeRate.
       expect((await deployedContract.balanceOf(tokenDistribution.address)).toString()).eq(`${(sendingValue - sendingValueAfterFee)}`)
-      
+
       await tokenDistribution.withDrawAllTokens();
-      
+
       const recipientBalance2 = await recipient.getBalance();
-      
+
       // recipient is the withdrawer, and ETH balance should increase 10 after withdrawer.
-      expect((recipientBalance2 - recipientBalance1).toString()).eq(`${(sendingValue - sendingValueAfterFee2)}`) 
-      
+      expect((recipientBalance2 - recipientBalance1).toString()).eq(`${(sendingValue - sendingValueAfterFee2)}`)
+
       // contract's ERC20 balance should be 0 after withdrawder
       expect((await deployedContract.balanceOf(tokenDistribution.address)).toString()).eq('0')
 
       const listTokensRes2 = await tokenDistribution.listTokens();
-      
+
       // contract's array of withdrawable token list, should be empty
       expect(listTokensRes2.length).eq(0)
     });
@@ -69,12 +79,22 @@ describe("TokenDistribution", async function () {
   it("DepositETHToRecipients and claim", async () => {
     const tokenDistribution = await deployContract();
     const recipient = await ethers.getSigner(TEST_ADDRESS);
-    await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, { value: "100" });
+
+    let realDepositeValue = BigNumber.from(`100`);
+    const gasPrice = await ethers.provider.getGasPrice();
+    const estimatedGas = BigNumber.from(claimGasEstimate)
+    const preGas = BigNumber.from(`${gasPrice * estimatedGas}`);
+    realDepositeValue = realDepositeValue.add(preGas);
+
+    await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, preGas, { value: `${realDepositeValue}` });
+
     await tokenDistribution.claim(0, TEST_ADDRESS, 50);
     const balance1 = await recipient.getBalance();
     expect(balance1.toString()).eq("100")
 
-    await tokenDistribution.depositETHToRecipients(2, [TEST_ADDRESS, TEST_ADDRESS], tomorrow(), false, { value: "100" });
+    realDepositeValue = realDepositeValue.add(preGas);
+    const preGas2 = BigNumber.from(`${Number(preGas.toString()) * 2}`)
+    await tokenDistribution.depositETHToRecipients(2, [TEST_ADDRESS, TEST_ADDRESS], tomorrow(), false, preGas2, { value: `${realDepositeValue}` });
     await tokenDistribution.claim(1, TEST_ADDRESS, 50);
     const balance2 = await recipient.getBalance();
     expect(balance2.toString()).eq("150")
@@ -84,20 +104,30 @@ describe("TokenDistribution", async function () {
   it("DepositETHToRoom and claim", async () => {
     const tokenDistribution = await deployContract();
     const recipient = await ethers.getSigner(TEST_ADDRESS);
-    await tokenDistribution.depositETHToRoom(1, 1, tomorrow(), false, { value: "100" });
+
+    let realDepositeValue = BigNumber.from(`100`);
+    const gasPrice = await ethers.provider.getGasPrice();
+    const estimatedGas = BigNumber.from(claimGasEstimate)
+    const preGas = BigNumber.from(`${gasPrice * estimatedGas}`);
+    realDepositeValue = realDepositeValue.add(preGas);
+
+    await tokenDistribution.depositETHToRoom(1, 1, tomorrow(), false, preGas, { value: `${realDepositeValue}` });
     await tokenDistribution.claim(0, TEST_ADDRESS, 100);
     const balance1 = await recipient.getBalance();
     expect(balance1.toString()).eq("250")
 
-    await tokenDistribution.depositETHToRoom(2, 1, tomorrow(), false, { value: "100" });
+    realDepositeValue = realDepositeValue.add(preGas);
+    const preGas2 = BigNumber.from(`${Number(preGas.toString()) * 2}`)
+    await tokenDistribution.depositETHToRoom(2, 1, tomorrow(), false, preGas2, { value: `${realDepositeValue}` });
     await tokenDistribution.claim(1, TEST_ADDRESS, 50);
     const balance2 = await recipient.getBalance();
     expect(balance2.toString()).eq("300")
 
-    await tokenDistribution.depositETHToRoom(2, 1, now(), false, { value: "100" });
-    expect((await tokenDistribution.provider.getBalance(tokenDistribution.address)).toString()).eq("150")
+    await tokenDistribution.depositETHToRoom(2, 1, now(), false, preGas2, { value: `${realDepositeValue}` });
+    const contractBalance1 = await tokenDistribution.provider.getBalance(tokenDistribution.address)
     await tokenDistribution.claimToSender(2);
-    expect((await tokenDistribution.provider.getBalance(tokenDistribution.address)).toString()).eq("50")
+    const contractBalance2 = await tokenDistribution.provider.getBalance(tokenDistribution.address)
+    expect((Number(contractBalance1.toString()) - Number(contractBalance2.toString()))).eq(100);
   });
 });
 
@@ -115,7 +145,11 @@ describe("TokenDistributionForErc20", async function () {
 
     await deployedContract.approve(tokenDistribution.address, sendingValue);
 
-    await tokenDistribution.depositErc20ToRecipients(sendingValue, 1, [TEST_ADDRESS], tomorrow(), false, tokenAddress);
+    const gasPrice = await ethers.provider.getGasPrice();
+    const estimatedGas = BigNumber.from(claimGasEstimate)
+    const preGas = BigNumber.from(`${gasPrice * estimatedGas}`);
+
+    await tokenDistribution.depositErc20ToRecipients(sendingValue, 1, [TEST_ADDRESS], tomorrow(), false, tokenAddress, { value: `${preGas}` });
     await tokenDistribution.claim(0, TEST_ADDRESS, sendingValue);
     expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValue}`)
   });
@@ -130,16 +164,21 @@ describe("TokenDistributionForErc20", async function () {
     const ownerBalance = await deployedContract.balanceOf(owner.address);
     expect(Number(ownerBalance.toString())).above(sendingValue1)
 
+    const gasPrice = await ethers.provider.getGasPrice();
+    const estimatedGas = BigNumber.from(claimGasEstimate)
+    const preGas = BigNumber.from(`${gasPrice * estimatedGas}`);
+
     await deployedContract.approve(tokenDistribution.address, sendingValue1);
-    await tokenDistribution.depositErc20ToRoom(sendingValue1, 1, 1, tomorrow(), false, tokenAddress);
+    await tokenDistribution.depositErc20ToRoom(sendingValue1, 1, 1, tomorrow(), false, tokenAddress, { value: `${preGas}` });
     // await deployedContract.transfer(tokenDistribution.address, sendingValue1);
     await tokenDistribution.claim(0, TEST_ADDRESS, sendingValue1);
     expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq(`${sendingValue1}`)
+    const preGas2 = BigNumber.from(`${Number(preGas.toString()) * 2}`)
 
     await deployedContract.approve(tokenDistribution.address, sendingValue1);
-    await tokenDistribution.depositErc20ToRoom(sendingValue1, 2, 1, tomorrow(), false, tokenAddress);
+    await tokenDistribution.depositErc20ToRoom(sendingValue1, 2, 1, tomorrow(), false, tokenAddress, { value: `${preGas2}` });
     // await deployedContract.transfer(tokenDistribution.address, sendingValue1);
-    await tokenDistribution.claim(1, TEST_ADDRESS, sendingValue1/2);
+    await tokenDistribution.claim(1, TEST_ADDRESS, sendingValue1 / 2);
     expect((await deployedContract.balanceOf(TEST_ADDRESS)).toString()).eq("300")
 
     await time.setNextBlockTimestamp(tomorrow() + 3600);
