@@ -8,7 +8,7 @@ contract TokenDistribution is Initializable {
 
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
-    uint32 constant claimGasEvaluate = 220669;
+    uint32 public constant claimGasEvaluate = 220669;
 
     address public owner; // owner is the admin, and the contract creator.
     address public claimer; // claimer can do the claim
