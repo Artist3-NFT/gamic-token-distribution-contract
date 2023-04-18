@@ -95,31 +95,31 @@ contract TokenDistribution is Initializable {
         withDrawer = newWithdrawer;
     }
 
-    function depositETHToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random, uint256 preGas) public payable {
+    function depositETHToRecipients(uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random, uint256 totalValue) public payable {
         require(msg.value > 0, "Deposit amount is zero.");
-        require(msg.value > preGas, "Invalid Deposit Data.");
+        require(msg.value > totalValue, "Invalid Deposit Data.");
+        uint256 preGas = msg.value - totalValue;
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
 
         uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
         require(preGas >= localGas, "The preset claim gas is not enough.");
-        uint256 depositeValue = msg.value - preGas;
 
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, random, recipients, 0, depositeValue, depositeValue, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, random, recipients, 0, totalValue, totalValue, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }
 
-    function depositETHToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random, uint256 preGas) public payable {
+    function depositETHToRoom(uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random, uint256 totalValue) public payable {
         require(msg.value > 0, "Deposit amount is zero.");
-        require(msg.value > preGas, "Invalid Deposit Data.");
+        require(msg.value > totalValue, "Invalid Deposit Data.");
+        uint256 preGas = msg.value - totalValue;
         require(totalCount > 0, "Total count must be greater than zero.");
 
         uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
         require(preGas >= localGas, "The preset claim gas is not enough.");
-        uint256 depositeValue = msg.value - preGas;
 
-        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, random, new address[](0), roomId, depositeValue, depositeValue, totalCount, totalCount, expiredTime);
+        records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, random, new address[](0), roomId, totalValue, totalValue, totalCount, totalCount, expiredTime);
         emit DepositEvent(nextDepositId, msg.sender);
         nextDepositId++;
     }

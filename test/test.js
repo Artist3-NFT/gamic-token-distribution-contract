@@ -35,7 +35,7 @@ describe("TokenDistribution", async function () {
       realDepositeValue = realDepositeValue.add(preGas);
       // console.log('1A realDepositeValue :', realDepositeValue, gasPrice, estimatedGas)
 
-      await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, preGas, { value: `${realDepositeValue}` });
+      await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, 100, { value: `${realDepositeValue}` });
 
       await tokenDistribution.claim(0, TEST_ADDRESS, sendingValue);
       await tokenDistribution.setFeeRate(1000);
@@ -86,7 +86,7 @@ describe("TokenDistribution", async function () {
     const preGas = BigNumber.from(`${gasPrice * estimatedGas}`);
     realDepositeValue = realDepositeValue.add(preGas);
 
-    await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, preGas, { value: `${realDepositeValue}` });
+    await tokenDistribution.depositETHToRecipients(1, [TEST_ADDRESS], tomorrow(), false, 100, { value: `${realDepositeValue}` });
 
     await tokenDistribution.claim(0, TEST_ADDRESS, 50);
     const balance1 = await recipient.getBalance();
@@ -94,7 +94,7 @@ describe("TokenDistribution", async function () {
 
     realDepositeValue = realDepositeValue.add(preGas);
     const preGas2 = BigNumber.from(`${Number(preGas.toString()) * 2}`)
-    await tokenDistribution.depositETHToRecipients(2, [TEST_ADDRESS, TEST_ADDRESS], tomorrow(), false, preGas2, { value: `${realDepositeValue}` });
+    await tokenDistribution.depositETHToRecipients(2, [TEST_ADDRESS, TEST_ADDRESS], tomorrow(), false, 100, { value: `${realDepositeValue}` });
     await tokenDistribution.claim(1, TEST_ADDRESS, 50);
     const balance2 = await recipient.getBalance();
     expect(balance2.toString()).eq("150")
@@ -111,19 +111,19 @@ describe("TokenDistribution", async function () {
     const preGas = BigNumber.from(`${gasPrice * estimatedGas}`);
     realDepositeValue = realDepositeValue.add(preGas);
 
-    await tokenDistribution.depositETHToRoom(1, 1, tomorrow(), false, preGas, { value: `${realDepositeValue}` });
+    await tokenDistribution.depositETHToRoom(1, 1, tomorrow(), false, 100, { value: `${realDepositeValue}` });
     await tokenDistribution.claim(0, TEST_ADDRESS, 100);
     const balance1 = await recipient.getBalance();
     expect(balance1.toString()).eq("250")
 
     realDepositeValue = realDepositeValue.add(preGas);
     const preGas2 = BigNumber.from(`${Number(preGas.toString()) * 2}`)
-    await tokenDistribution.depositETHToRoom(2, 1, tomorrow(), false, preGas2, { value: `${realDepositeValue}` });
+    await tokenDistribution.depositETHToRoom(2, 1, tomorrow(), false, 100, { value: `${realDepositeValue}` });
     await tokenDistribution.claim(1, TEST_ADDRESS, 50);
     const balance2 = await recipient.getBalance();
     expect(balance2.toString()).eq("300")
 
-    await tokenDistribution.depositETHToRoom(2, 1, now(), false, preGas2, { value: `${realDepositeValue}` });
+    await tokenDistribution.depositETHToRoom(2, 1, now(), false, 100, { value: `${realDepositeValue}` });
     const contractBalance1 = await tokenDistribution.provider.getBalance(tokenDistribution.address)
     await tokenDistribution.claimToSender(2);
     const contractBalance2 = await tokenDistribution.provider.getBalance(tokenDistribution.address)
