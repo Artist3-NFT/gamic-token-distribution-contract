@@ -8,7 +8,6 @@ contract TokenDistribution is Initializable {
 
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
-    uint64 public claimGasEvaluate = 220669;
 
     address public owner; // owner is the admin, and the contract creator.
     address public claimer; // claimer can do the claim
@@ -17,7 +16,7 @@ contract TokenDistribution is Initializable {
     uint16 public feeRate; // feeRate accuracy is 0.01%. the default is 1%, and 1% is 100.
     mapping(address => uint256) public feeRecord;
     address[] public feeTokens;
-
+    uint64 public claimGasEvaluate;
 
     mapping(uint256 => Record) public records;
     mapping(uint256 => mapping(address => ClaimInfo)) public claimInfos;
@@ -54,6 +53,7 @@ contract TokenDistribution is Initializable {
         claimer = _owner;
         withDrawer = _owner;
         feeRate = 100;
+        claimGasEvaluate = 220669;
     }
 
     function setFeeRate(uint16 _feeRate) public onlyOwner {
