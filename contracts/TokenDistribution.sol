@@ -8,7 +8,7 @@ contract TokenDistribution is Initializable {
 
     uint8 constant RECORD_TYPE_RECIPIENTS = 1;
     uint8 constant RECORD_TYPE_ROOM = 2;
-    uint32 public constant claimGasEvaluate = 220669;
+    uint64 public claimGasEvaluate = 220669;
 
     address public owner; // owner is the admin, and the contract creator.
     address public claimer; // claimer can do the claim
@@ -59,6 +59,10 @@ contract TokenDistribution is Initializable {
     function setFeeRate(uint16 _feeRate) public onlyOwner {
         require(_feeRate <= 10000, "Fee rate must be between 0 and 10000.");
         feeRate = _feeRate;
+    }
+
+    function setClaimGas(uint64 _gasOfClaim) public onlyClaimer {
+        claimGasEvaluate = _gasOfClaim;
     }
 
     modifier onlyOwner() {
