@@ -53,7 +53,7 @@ contract TokenDistribution is Initializable {
         claimer = _owner;
         withDrawer = _owner;
         feeRate = 100;
-        claimGasEvaluate = 220669;
+        claimGasEvaluate = 1_800_000_000_000_000;
     }
 
     function setFeeRate(uint16 _feeRate) public onlyOwner {
@@ -102,7 +102,7 @@ contract TokenDistribution is Initializable {
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
 
-        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        uint256 localGas = totalCount * claimGasEvaluate;
         require(preGas >= localGas, "The preset claim gas is not enough.");
 
         records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_RECIPIENTS, random, recipients, 0, totalValue, totalValue, totalCount, totalCount, expiredTime);
@@ -116,7 +116,7 @@ contract TokenDistribution is Initializable {
         uint256 preGas = msg.value - totalValue;
         require(totalCount > 0, "Total count must be greater than zero.");
 
-        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        uint256 localGas = totalCount * claimGasEvaluate;
         require(preGas >= localGas, "The preset claim gas is not enough.");
 
         records[nextDepositId] = Record(msg.sender, address(0), RECORD_TYPE_ROOM, random, new address[](0), roomId, totalValue, totalValue, totalCount, totalCount, expiredTime);
@@ -127,7 +127,7 @@ contract TokenDistribution is Initializable {
     function depositErc20ToRecipients(uint256 totalValue, uint32 totalCount, address[] memory recipients, uint256 expiredTime, bool random, address tokenAddress) public payable {
         require(totalCount > 0, "Total count must be greater than zero.");
         require(recipients.length >= totalCount, "The number of recipients must be greater than or equal to the total count.");
-        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        uint256 localGas = totalCount * claimGasEvaluate;
         require(msg.value >= localGas, "The preset claim gas is not enough.");
 
         ERC20 targetToken = ERC20(tokenAddress);
@@ -143,7 +143,7 @@ contract TokenDistribution is Initializable {
     function depositErc20ToRoom(uint256 totalValue, uint32 totalCount, uint32 roomId, uint256 expiredTime, bool random, address tokenAddress) public payable {
         require(totalValue > 0, "Deposit amount is zero.");
         require(totalCount > 0, "Total count must be greater than zero.");
-        uint256 localGas = totalCount * claimGasEvaluate * tx.gasprice;
+        uint256 localGas = totalCount * claimGasEvaluate;
         require(msg.value >= localGas, "The preset claim gas is not enough.");
 
         ERC20 targetToken = ERC20(tokenAddress);
