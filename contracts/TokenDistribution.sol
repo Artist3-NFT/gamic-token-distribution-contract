@@ -229,5 +229,3 @@ contract TokenDistribution is Initializable {
         return records[depositId].recipients;
     }
 }
-
-

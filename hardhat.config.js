@@ -38,6 +38,11 @@ module.exports = {
       gas: 3000000,
       chainId: 11155111
     },
+    bscmainnet: {
+      url: "https://bsc-dataseed.binance.org/",
+      accounts,
+      chainId: 56,
+    }
   },
   etherscan: {
     apiKey: {
