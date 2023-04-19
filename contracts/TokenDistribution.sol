@@ -223,6 +223,11 @@ contract TokenDistribution is Initializable {
         (bool success, ) = to.call{value: value}(new bytes(0));
         require(success, 'Send eth failed.');
     }
+
+    function getRecordRecipients(uint256 depositId) public view returns (address[] memory) {
+        require(depositId < nextDepositId, "Invalid index.");
+        return records[depositId].recipients;
+    }
 }
 
 
